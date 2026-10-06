@@ -1,0 +1,30 @@
+# Render Deployment Configuration
+# Online Course Learning Progress Management System
+
+# Web Service
+services:
+  - type: web
+    name: dbms-course-project
+    runtime: python
+    region: singapore  # closest to India
+    plan: free
+    rootDir: Presentation III
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.12
+      - key: DB_HOST
+        sync: false  # Set manually in Render dashboard
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: SECRET_KEY
+        generateValue: true

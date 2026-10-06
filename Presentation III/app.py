@@ -18,6 +18,13 @@ DB_CONFIG = {
     'autocommit': True
 }
 
+# Enable SSL for cloud MySQL providers (Aiven, TiDB, PlanetScale, etc.)
+if os.environ.get('DB_SSL', '').lower() in ('true', '1', 'yes'):
+    DB_CONFIG['ssl_disabled'] = False
+    ca_path = os.environ.get('DB_SSL_CA', '')
+    if ca_path:
+        DB_CONFIG['ssl_ca'] = ca_path
+
 def get_db_connection():
     """Establish and return a connection to MySQL database."""
     try:
@@ -26,6 +33,60 @@ def get_db_connection():
     except Error as e:
         print(f"Database connection error: {e}")
         return None
+
+def init_database():
+    """Initialize the database from init_db.sql if tables don't exist yet.
+    
+    This runs on first deployment so the cloud database gets seeded
+    with schema and sample data automatically.
+    """
+    # First connect WITHOUT specifying a database to create it if needed
+    init_config = {k: v for k, v in DB_CONFIG.items() if k != 'database'}
+    try:
+        conn = mysql.connector.connect(**init_config)
+        cursor = conn.cursor()
+        db_name = DB_CONFIG.get('database', 'OnlineLearningSystem')
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")
+        cursor.execute(f"USE `{db_name}`")
+
+        # Check if STUDENT table already exists (i.e. DB is already seeded)
+        cursor.execute("SHOW TABLES LIKE 'STUDENT'")
+        if cursor.fetchone():
+            print("[init_database] Tables already exist — skipping seed.")
+            cursor.close()
+            conn.close()
+            return
+
+        # Run init_db.sql to create tables and seed data
+        sql_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'init_db.sql')
+        if not os.path.exists(sql_path):
+            print(f"[init_database] init_db.sql not found at {sql_path}")
+            cursor.close()
+            conn.close()
+            return
+
+        print(f"[init_database] Seeding database from {sql_path}...")
+        with open(sql_path, 'r', encoding='utf-8') as f:
+            sql_content = f.read()
+
+        # Split by semicolons and execute each statement
+        statements = [s.strip() for s in sql_content.split(';') if s.strip()]
+        for stmt in statements:
+            # Skip CREATE DATABASE and USE statements (already handled above)
+            upper = stmt.upper().lstrip()
+            if upper.startswith('CREATE DATABASE') or upper.startswith('USE '):
+                continue
+            try:
+                cursor.execute(stmt)
+            except Error as stmt_err:
+                print(f"[init_database] Warning on statement: {stmt_err}")
+
+        conn.commit()
+        print("[init_database] Database seeded successfully!")
+        cursor.close()
+        conn.close()
+    except Error as e:
+        print(f"[init_database] Error: {e}")
 
 def clean_row(row):
     """Recursively serialize Decimal, Date, and DateTime objects for JSON responses."""
@@ -430,6 +491,11 @@ def health_check():
         return jsonify({'status': 'healthy', 'database': 'connected'})
     return jsonify({'status': 'unhealthy', 'database': 'disconnected'}), 500
 
+# Initialize database on startup (seeds tables from init_db.sql if they don't exist)
+# This runs on both local dev and Render deployment
+init_database()
+
 if __name__ == '__main__':
     # Running Flask dev server on 127.0.0.1:5000
     app.run(host='127.0.0.1', port=5000, debug=True)
+
