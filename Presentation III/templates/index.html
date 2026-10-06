@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Course Learning Progress Management System | Siddhant Agarwal</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom Warm Aesthetic CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- Sleek Navigation Header -->
+    <header class="navbar">
+        <div class="navbar-container">
+            <div class="brand-wrapper">
+                <div class="brand-icon">
+                    <span>🎓</span>
+                </div>
+                <div class="brand-text">
+                    <h1>Online Course Learning Progress Management System</h1>
+                    <span class="brand-subtitle">Relational DBMS Platform &middot; Live MySQL 9.7 Backend</span>
+                </div>
+            </div>
+            
+            <div class="nav-meta">
+                <div class="db-status">
+                    <span class="status-dot"></span>
+                    <span>Live MySQL: OnlineLearningSystem</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-wrapper">
+
+        <!-- Flash Notifications -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash-alert {{ category }}" role="alert">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span>
+                                    {% if category == 'success' %}✓{% elif category == 'warning' %}⚠{% else %}✕{% endif %}
+                                </span>
+                                <span>{{ message }}</span>
+                            </div>
+                            <button type="button" class="flash-close-btn" aria-label="Close notification">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- KPI Metrics Ribbon -->
+        <section class="stats-grid" aria-label="System Metrics">
+            <div class="stat-card">
+                <div class="stat-icon terracotta">👥</div>
+                <div class="stat-info">
+                    <span class="stat-label">Total Students</span>
+                    <span class="stat-value" id="kpiTotalStudents">{{ stats.total_students if stats.total_students is defined else students|length }}</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon amber">📚</div>
+                <div class="stat-info">
+                    <span class="stat-label">Active Courses</span>
+                    <span class="stat-value">{{ stats.total_courses if stats.total_courses is defined else courses|length }}</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon sage">📈</div>
+                <div class="stat-info">
+                    <span class="stat-label">Avg. Progress</span>
+                    <span class="stat-value" id="kpiAvgProgress">{{ stats.avg_progress if stats.avg_progress is defined else '63.1' }}%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon neutral">👨‍🏫</div>
+                <div class="stat-info">
+                    <span class="stat-label">Faculty Instructors</span>
+                    <span class="stat-value">{{ stats.total_instructors if stats.total_instructors is defined else instructors|length }}</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Workspace: Form (Left) & Live Student Table (Right) -->
+        <div class="dashboard-grid">
+            
+            <!-- 1. Insert Record Section -->
+            <section class="card" aria-labelledby="formHeading">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="card-title-icon">➕</span>
+                        <div>
+                            <h2 id="formHeading" class="card-title">Register Student</h2>
+                            <p class="card-subtitle">Add a new student profile</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <form action="{{ url_for('add_student') }}" method="POST" autocomplete="off" id="addStudentForm">
+                        <div class="form-group">
+                            <label for="name" class="form-label">Full Name <span class="required">*</span></label>
+                            <input 
+                                type="text" 
+                                id="name" 
+                                name="name" 
+                                class="form-input" 
+                                placeholder="e.g., Ishaan Sharma" 
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email" class="form-label">University Email <span class="required">*</span></label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                class="form-input" 
+                                placeholder="e.g., ishaan@univ.edu" 
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="department" class="form-label">Department <span class="required">*</span></label>
+                            <select id="department" name="department" class="form-select" required>
+                                <option value="" disabled selected>Select Department</option>
+                                <option value="Computer Science">Computer Science</option>
+                                <option value="Information Tech">Information Tech</option>
+                                <option value="Electronics">Electronics</option>
+                                <option value="Mechanical Eng">Mechanical Eng</option>
+                                <option value="Civil Eng">Civil Eng</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="year" class="form-label">Year of Study <span class="required">*</span></label>
+                                <select id="year" name="year" class="form-select" required>
+                                    <option value="1">1st Year</option>
+                                    <option value="2">2nd Year</option>
+                                    <option value="3">3rd Year</option>
+                                    <option value="4">4th Year</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="phone" class="form-label">Phone Number <span class="required">*</span></label>
+                                <input 
+                                    type="text" 
+                                    id="phone" 
+                                    name="phone" 
+                                    class="form-input" 
+                                    placeholder="555-1031" 
+                                    required
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Initial Course Enrollment Selection -->
+                        <div class="form-group">
+                            <label for="course_id" class="form-label">Enroll in Course</label>
+                            <select id="course_id" name="course_id" class="form-select">
+                                <option value="">-- Choose Course to Initialize Progress --</option>
+                                {% for c in courses %}
+                                    <option value="{{ c.Course_ID }}">{{ c.Course_Name }} ({{ c.Category }})</option>
+                                {% endfor %}
+                            </select>
+                            <span style="font-size: 0.74rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                                Automatically initializes course enrollment and progress tracking.
+                            </span>
+                        </div>
+
+                        <button type="submit" class="btn-primary" id="btnSubmitStudent">
+                            <span>Register &amp; Save to Database</span>
+                            <span>&rarr;</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 2. View & Delete Records Section -->
+            <section class="card" aria-labelledby="tableHeading">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="card-title-icon">📋</span>
+                        <div>
+                            <h2 id="tableHeading" class="card-title">Student Directory</h2>
+                            <p class="card-subtitle">Click any student to inspect detailed avg. progress &amp; grades</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Filter & Search Controls -->
+                <div class="table-toolbar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input 
+                            type="text" 
+                            id="studentSearchInput" 
+                            class="search-input" 
+                            placeholder="Filter by name, email, department..." 
+                            aria-label="Filter students"
+                        >
+                    </div>
+                    <div class="table-stats-count">
+                        Showing <strong id="visibleStudentCount">{{ students|length }}</strong> of <strong>{{ students|length }}</strong> students
+                    </div>
+                </div>
+
+                <!-- Scrollable HTML Data Table -->
+                <div class="table-responsive-container">
+                    <table class="data-table" id="studentTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">ID</th>
+                                <th>Student Details</th>
+                                <th>Department</th>
+                                <th style="width: 80px;">Year</th>
+                                <th>Courses</th>
+                                <th>Avg. Progress</th>
+                                <th style="width: 170px; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody">
+                            {% for student in students %}
+                                <tr 
+                                    class="student-row" 
+                                    id="row-student-{{ student.Student_ID }}"
+                                    data-student-id="{{ student.Student_ID }}"
+                                    data-student-name="{{ student.Name }}"
+                                    title="Click to view learning progress for {{ student.Name }}"
+                                >
+                                    <td>
+                                        <span class="id-badge">#{{ student.Student_ID }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="student-name">{{ student.Name }}</div>
+                                        <div class="student-email">{{ student.Email }}</div>
+                                    </td>
+                                    <td>
+                                        {% if student.Department == 'Computer Science' %}
+                                            <span class="badge-dept cs">CS</span>
+                                        {% elif student.Department == 'Information Tech' %}
+                                            <span class="badge-dept it">IT</span>
+                                        {% elif student.Department == 'Electronics' %}
+                                            <span class="badge-dept ece">ECE</span>
+                                        {% else %}
+                                            <span class="badge-dept other">{{ student.Department }}</span>
+                                        {% endif %}
+                                        <span style="font-size: 0.8rem; margin-left: 0.25rem; color: var(--text-secondary);">
+                                             {{ student.Department }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge-year">Year {{ student.Year }}</span>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-primary);">
+                                            📚 {{ student.Enrolled_Count }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if student.Avg_Progress is not none %}
+                                            <span class="badge-avg-prog {% if student.Avg_Progress >= 100 %}completed{% endif %}">
+                                                {{ student.Avg_Progress }}%
+                                            </span>
+                                        {% else %}
+                                            <span style="font-size: 0.78rem; color: var(--text-muted);">&mdash;</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <div class="table-actions">
+                                            <!-- View Details Button -->
+                                            <button 
+                                                type="button" 
+                                                class="btn-view-details" 
+                                                data-action="view-details"
+                                                data-student-id="{{ student.Student_ID }}"
+                                                title="View full learning progress and assessment results"
+                                            >
+                                                <span>📊</span>
+                                                <span>Details</span>
+                                            </button>
+
+                                            <!-- Functional Delete Form per row -->
+                                            <form 
+                                                action="{{ url_for('delete_student', student_id=student.Student_ID) }}" 
+                                                method="POST" 
+                                                class="delete-student-form"
+                                                data-student-name="{{ student.Name }}"
+                                                data-student-id="{{ student.Student_ID }}"
+                                                style="display: inline;"
+                                            >
+                                                <button 
+                                                    type="button" 
+                                                    class="btn-delete" 
+                                                    data-student-id="{{ student.Student_ID }}"
+                                                    data-student-name="{{ student.Name }}"
+                                                    title="Delete student #{{ student.Student_ID }}"
+                                                    aria-label="Delete student #{{ student.Student_ID }}"
+                                                >
+                                                    <span>🗑️</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="table-empty-state">
+                                        <div class="empty-icon">📭</div>
+                                        <p>No student records found in the database.</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+
+                            <!-- Client-side Search No-Results Placeholder -->
+                            <tr id="tableSearchEmptyState" style="display: none;">
+                                <td colspan="7" class="table-empty-state">
+                                    <div class="empty-icon">🔍</div>
+                                    <p>No students match your search filter.</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- 3. Secondary Section: Relational Data -->
+        <section class="relational-section" aria-labelledby="relationalHeading">
+            <div class="section-intro">
+                <h2 id="relationalHeading">Courses &amp; Faculty Instructors</h2>
+                <p>Academic curriculum programs and assigned faculty advisors</p>
+            </div>
+
+            <div class="relational-grid">
+                <!-- Courses List -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <span class="card-title-icon">📖</span>
+                            <div>
+                                <h3 class="card-title">Available Courses</h3>
+                                <p class="card-subtitle">Total: {{ courses|length }} modules and curriculum tracks</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="course-card-list">
+                            {% for course in courses %}
+                                <div class="course-item">
+                                    <div class="course-header">
+                                        <span class="course-title">{{ course.Course_Name }}</span>
+                                        <div class="course-badges">
+                                            <span class="badge-level {{ course.Level|lower }}">{{ course.Level }}</span>
+                                            <span class="badge-level" style="background: var(--bg-card-subtle);">{{ course.Category }}</span>
+                                        </div>
+                                    </div>
+                                    <p class="course-desc">{{ course.Description }}</p>
+                                    <div class="course-footer">
+                                        <span>⏱️ Duration: <strong>{{ course.Duration }} hrs</strong> &middot; Modules: <strong>{{ course.Module_Count }}</strong></span>
+                                        <span class="instructor-link" title="Instructor Specialization: {{ course.Instructor_Specialization }}">
+                                            👨‍🏫 {{ course.Instructor_Name or 'Unassigned' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="table-empty-state">
+                                    <p>No course records found.</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instructors List -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <span class="card-title-icon">🎓</span>
+                            <div>
+                                <h3 class="card-title">Faculty Instructors</h3>
+                                <p class="card-subtitle">Academic advisors and assigned course leads</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="instructor-card-list">
+                            {% for inst in instructors %}
+                                <div class="instructor-item">
+                                    <div class="instructor-avatar">
+                                        {{ inst.Name[4:6] if inst.Name.startswith('Dr. ') else inst.Name[:2] }}
+                                    </div>
+                                    <div class="instructor-details">
+                                        <div class="instructor-name">{{ inst.Name }}</div>
+                                        <div class="instructor-spec">{{ inst.Specialization }} &middot; ID #{{ inst.Instructor_ID }}</div>
+                                        <div class="instructor-contact">✉️ {{ inst.Email }} &middot; 📞 {{ inst.Phone }}</div>
+                                    </div>
+                                    <div>
+                                        <span class="badge-year" style="background-color: var(--accent-sage-light); color: var(--accent-sage);">
+                                            {{ inst.Course_Count }} {{ 'Course' if inst.Course_Count == 1 else 'Courses' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="table-empty-state">
+                                    <p>No instructor records found.</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Student Detail Modal System -->
+    <div id="studentDetailsModal" class="modal-backdrop" aria-hidden="true" style="display: none;">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalStudentTitle">
+            <div class="modal-header">
+                <div class="modal-header-profile" id="modalHeaderProfile">
+                    <!-- Populated dynamically via JS -->
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeStudentDetails()" aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="modal-body" id="modalStudentContent">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Sleek Minimalist Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <div class="footer-title">Online Course Learning Progress Management System</div>
+                <div class="footer-subtitle">Database Management Systems (DBMS) Course Project Prototype &middot; Academic Year 2026</div>
+            </div>
+            <div class="footer-credit">
+                Developed by <strong>Siddhant Agarwal (25WU0102262)</strong>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Interactive Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
