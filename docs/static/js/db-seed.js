@@ -276,7 +276,7 @@ const INITIAL_DB_SEED = {
       "Email": "asiddhant706@gmail.com",
       "Department": "Computer Science",
       "Year": 1,
-      "Phone": "33142132"
+      "Phone": "634534"
     }
   ],
   "COURSE": [
@@ -651,12 +651,12 @@ const INITIAL_DB_SEED = {
       "Course_ID": 4
     },
     {
-      "Enrollment_ID": 35,
-      "Enroll_Date": "2026-08-10",
+      "Enrollment_ID": 36,
+      "Enroll_Date": "2026-10-06",
       "Status": "Active",
       "Completion_Date": null,
       "Student_ID": 31,
-      "Course_ID": 2
+      "Course_ID": 1
     }
   ],
   "PROGRESS": [
@@ -967,13 +967,13 @@ const INITIAL_DB_SEED = {
       "Module_ID": 4
     },
     {
-      "Progress_ID": 35,
-      "Progress_Date": "2026-09-15",
-      "Completion_Percent": 92.0,
+      "Progress_ID": 36,
+      "Progress_Date": "2026-10-06",
+      "Completion_Percent": 0.0,
       "Status": "In Progress",
-      "Time_Spent": 115,
+      "Time_Spent": 0,
       "Student_ID": 31,
-      "Module_ID": 2
+      "Module_ID": 1
     }
   ],
   "RESULT": [
@@ -1279,14 +1279,6 @@ const INITIAL_DB_SEED = {
       "Attempt_No": 3,
       "Result_Date": "2026-09-20",
       "Student_ID": 10,
-      "Assessment_ID": 2
-    },
-    {
-      "Result_ID": 39,
-      "Score": 96.5,
-      "Attempt_No": 1,
-      "Result_Date": "2026-09-20",
-      "Student_ID": 31,
       "Assessment_ID": 2
     }
   ]

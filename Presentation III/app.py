@@ -1,4 +1,5 @@
 import os
+import json
 from decimal import Decimal
 from datetime import date, datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
@@ -87,6 +88,194 @@ def init_database():
         conn.close()
     except Error as e:
         print(f"[init_database] Error: {e}")
+
+def sync_database_to_sql_files(conn):
+    """
+    Export current MySQL database state directly into init_db.sql files
+    so the SQL file on disk is ALWAYS updated whenever students/records are added or deleted.
+    """
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        schema_header = """CREATE DATABASE IF NOT EXISTS OnlineLearningSystem;
+
+USE OnlineLearningSystem;
+
+-- Drop child tables first in case they exist to allow clean re-runs
+DROP TABLE IF EXISTS RESULT;
+DROP TABLE IF EXISTS PROGRESS;
+DROP TABLE IF EXISTS ENROLLMENT;
+DROP TABLE IF EXISTS ASSESSMENT;
+DROP TABLE IF EXISTS MODULE;
+DROP TABLE IF EXISTS COURSE;
+DROP TABLE IF EXISTS STUDENT;
+DROP TABLE IF EXISTS INSTRUCTOR;
+
+-- 1. Master Tables
+CREATE TABLE INSTRUCTOR (
+    Instructor_ID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(100) NOT NULL,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    Specialization VARCHAR(100),
+    Phone VARCHAR(15)
+);
+
+CREATE TABLE STUDENT (
+    Student_ID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(100) NOT NULL,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    Department VARCHAR(50),
+    Year INT,
+    Phone VARCHAR(15)
+);
+
+-- 2. Core Entity
+CREATE TABLE COURSE (
+    Course_ID INT PRIMARY KEY AUTO_INCREMENT,
+    Course_Name VARCHAR(150) NOT NULL,
+    Description TEXT,
+    Duration INT,
+    Category VARCHAR(50),
+    Level VARCHAR(50),
+    Instructor_ID INT,
+    FOREIGN KEY (Instructor_ID) REFERENCES INSTRUCTOR (Instructor_ID) ON DELETE SET NULL
+);
+
+-- 3. Organizational Entities
+CREATE TABLE MODULE (
+    Module_ID INT PRIMARY KEY AUTO_INCREMENT,
+    Module_Name VARCHAR(150) NOT NULL,
+    Description TEXT,
+    Sequence_No INT,
+    Course_ID INT,
+    FOREIGN KEY (Course_ID) REFERENCES COURSE (Course_ID) ON DELETE CASCADE
+);
+
+CREATE TABLE ASSESSMENT (
+    Assessment_ID INT PRIMARY KEY AUTO_INCREMENT,
+    Assessment_Name VARCHAR(150) NOT NULL,
+    Assessment_Type VARCHAR(50),
+    Max_Marks DECIMAL(5, 2),
+    Module_ID INT,
+    FOREIGN KEY (Module_ID) REFERENCES MODULE (Module_ID) ON DELETE CASCADE
+);
+
+-- 4. Transactional Entities
+CREATE TABLE ENROLLMENT (
+    Enrollment_ID INT PRIMARY KEY AUTO_INCREMENT,
+    Enroll_Date DATE NOT NULL,
+    Status VARCHAR(50),
+    Completion_Date DATE,
+    Student_ID INT,
+    Course_ID INT,
+    FOREIGN KEY (Student_ID) REFERENCES STUDENT (Student_ID) ON DELETE CASCADE,
+    FOREIGN KEY (Course_ID) REFERENCES COURSE (Course_ID) ON DELETE CASCADE
+);
+
+CREATE TABLE PROGRESS (
+    Progress_ID INT PRIMARY KEY AUTO_INCREMENT,
+    Progress_Date DATE,
+    Completion_Percent DECIMAL(5, 2),
+    Status VARCHAR(50),
+    Time_Spent INT,
+    Student_ID INT,
+    Module_ID INT,
+    FOREIGN KEY (Student_ID) REFERENCES STUDENT (Student_ID) ON DELETE CASCADE,
+    FOREIGN KEY (Module_ID) REFERENCES MODULE (Module_ID) ON DELETE CASCADE
+);
+
+CREATE TABLE RESULT (
+    Result_ID INT PRIMARY KEY AUTO_INCREMENT,
+    Score DECIMAL(5, 2),
+    Attempt_No INT,
+    Result_Date DATE,
+    Student_ID INT,
+    Assessment_ID INT,
+    FOREIGN KEY (Student_ID) REFERENCES STUDENT (Student_ID) ON DELETE CASCADE,
+    FOREIGN KEY (Assessment_ID) REFERENCES ASSESSMENT (Assessment_ID) ON DELETE CASCADE
+);
+"""
+        tables = ['INSTRUCTOR', 'STUDENT', 'COURSE', 'MODULE', 'ASSESSMENT', 'ENROLLMENT', 'PROGRESS', 'RESULT']
+        all_data = {}
+        sql_inserts = []
+        
+        for table in tables:
+            cursor.execute(f"SELECT * FROM {table} ORDER BY 1 ASC")
+            rows = cursor.fetchall()
+            all_data[table] = rows
+            
+            if rows:
+                cols = list(rows[0].keys())
+                col_list_str = ", ".join(cols)
+                
+                val_chunks = []
+                for r in rows:
+                    vals = []
+                    for col in cols:
+                        v = r[col]
+                        if v is None:
+                            vals.append("NULL")
+                        elif isinstance(v, (int, float, Decimal)):
+                            vals.append(str(v))
+                        elif isinstance(v, (date, datetime)):
+                            vals.append(f"'{v.isoformat()}'")
+                        else:
+                            escaped = str(v).replace("'", "''")
+                            vals.append(f"'{escaped}'")
+                    val_chunks.append(f"    ({', '.join(vals)})")
+                
+                sql_inserts.append(f"\n-- Insert {len(rows)} records into {table}\nINSERT INTO {table} ({col_list_str})\nVALUES\n" + ",\n".join(val_chunks) + ";")
+
+        full_sql_content = schema_header + "\n" + "\n".join(sql_inserts) + "\n"
+
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        target_paths = [
+            os.path.join(base_dir, 'init_db.sql'),
+            os.path.join(base_dir, 'Presentation III', 'init_db.sql'),
+            os.path.join(os.path.dirname(base_dir), 'init_db.sql'),
+            os.path.join(os.path.dirname(base_dir), 'Presentation III', 'init_db.sql')
+        ]
+        
+        for p in set(target_paths):
+            if os.path.exists(os.path.dirname(p)):
+                try:
+                    with open(p, 'w', encoding='utf-8') as f:
+                        f.write(full_sql_content)
+                except Exception as ex:
+                    print(f"Failed to write to {p}: {ex}")
+
+        json_data = {}
+        for t, rows in all_data.items():
+            json_data[t] = [clean_row(r) for r in rows]
+        
+        js_seed_content = f"const INITIAL_DB_SEED = {json.dumps(json_data, indent=2)};\n"
+        
+        seed_paths = [
+            os.path.join(base_dir, 'db_seed.json'),
+            os.path.join(base_dir, 'static', 'js', 'db-seed.js'),
+            os.path.join(base_dir, 'Presentation III', 'static', 'js', 'db-seed.js'),
+            os.path.join(base_dir, 'docs', 'static', 'js', 'db-seed.js'),
+            os.path.join(os.path.dirname(base_dir), 'db_seed.json'),
+            os.path.join(os.path.dirname(base_dir), 'static', 'js', 'db-seed.js')
+        ]
+        
+        for sp in set(seed_paths):
+            if os.path.exists(os.path.dirname(sp)):
+                try:
+                    if sp.endswith('.json'):
+                        with open(sp, 'w', encoding='utf-8') as f:
+                            json.dump(json_data, f, indent=2)
+                    elif sp.endswith('.js'):
+                        with open(sp, 'w', encoding='utf-8') as f:
+                            f.write(js_seed_content)
+                except Exception as ex:
+                    print(f"Failed to write seed {sp}: {ex}")
+
+        print(f"[sync_database_to_sql_files] Synced {len(all_data['STUDENT'])} students to init_db.sql!")
+        cursor.close()
+    except Exception as e:
+        print(f"[sync_database_to_sql_files] Error: {e}")
+
 
 def clean_row(row):
     """Recursively serialize Decimal, Date, and DateTime objects for JSON responses."""
@@ -263,6 +452,8 @@ def add_student():
                 print(f"Auto-enrollment error: {enroll_err}")
 
         conn.commit()
+        # Automatically update init_db.sql whenever a student is added
+        sync_database_to_sql_files(conn)
         flash(f"Student '{name}' was successfully registered as Student #{new_student_id}!", "success")
     except mysql.connector.IntegrityError as ie:
         if ie.errno == 1062:
@@ -305,6 +496,9 @@ def delete_student(student_id):
         # Foreign keys have ON DELETE CASCADE in ENROLLMENT, PROGRESS, RESULT
         cursor.execute("DELETE FROM STUDENT WHERE Student_ID = %s", (student_id,))
         conn.commit()
+
+        # Automatically update init_db.sql whenever a student is deleted
+        sync_database_to_sql_files(conn)
 
         # Recalculate remaining student count & avg progress for real-time KPI updates
         cursor.execute("SELECT COUNT(*) AS total_students FROM STUDENT")
