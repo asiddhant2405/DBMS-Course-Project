@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Course Learning Progress Management System | Siddhant Agarwal</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom Warm Aesthetic CSS -->
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+    <!-- Sleek Navigation Header -->
+    <header class="navbar">
+        <div class="navbar-container">
+            <div class="brand-wrapper">
+                <div class="brand-icon">
+                    <span>🎓</span>
+                </div>
+                <div class="brand-text">
+                    <h1>Online Course Learning Progress Management System</h1>
+                    <span class="brand-subtitle">Relational DBMS Platform &middot; Live Interactive System</span>
+                </div>
+            </div>
+            
+            <div class="nav-meta">
+                <div class="db-status">
+                    <span class="status-dot"></span>
+                    <span>Database: Active &amp; Synced</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-left: 0.8rem;">
+                    <button type="button" id="btnExportSql" class="btn-action-view" title="Export current database to SQL file">
+                        <span>💾</span> Export SQL
+                    </button>
+                    <button type="button" id="btnResetDatabase" class="btn-action-view" style="color: var(--accent-terracotta);" title="Reset back to default 31 student records">
+                        <span>🔄</span> Reset Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-wrapper">
+
+        <!-- Flash Notifications Container -->
+        <div class="flash-container"></div>
+
+        <!-- KPI Metrics Ribbon -->
+        <section class="stats-grid" aria-label="System Metrics">
+            <div class="stat-card">
+                <div class="stat-icon terracotta">👥</div>
+                <div class="stat-info">
+                    <span class="stat-label">Total Students</span>
+                    <span class="stat-value" id="kpiTotalStudents">31</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon amber">📚</div>
+                <div class="stat-info">
+                    <span class="stat-label">Active Courses</span>
+                    <span class="stat-value" id="kpiTotalCourses">4</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon sage">📈</div>
+                <div class="stat-info">
+                    <span class="stat-label">Avg. Progress</span>
+                    <span class="stat-value" id="kpiAvgProgress">63.1%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon neutral">👨‍🏫</div>
+                <div class="stat-info">
+                    <span class="stat-label">Faculty Instructors</span>
+                    <span class="stat-value" id="kpiTotalInstructors">4</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Workspace: Form (Left) & Live Student Table (Right) -->
+        <div class="dashboard-grid">
+            
+            <!-- 1. Insert Record Section -->
+            <section class="card" aria-labelledby="formHeading">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="card-title-icon">➕</span>
+                        <div>
+                            <h2 id="formHeading" class="card-title">Register Student</h2>
+                            <p class="card-subtitle">Add a new student profile</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <form autocomplete="off" id="addStudentForm">
+                        <div class="form-group">
+                            <label for="name" class="form-label">Full Name <span class="required">*</span></label>
+                            <input 
+                                type="text" 
+                                id="name" 
+                                name="name" 
+                                class="form-input" 
+                                placeholder="e.g., Ishaan Sharma" 
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email" class="form-label">University Email <span class="required">*</span></label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                class="form-input" 
+                                placeholder="e.g., ishaan@univ.edu" 
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="department" class="form-label">Department <span class="required">*</span></label>
+                            <select id="department" name="department" class="form-select" required>
+                                <option value="" disabled selected>Select Department</option>
+                                <option value="Computer Science">Computer Science</option>
+                                <option value="Information Tech">Information Tech</option>
+                                <option value="Electronics">Electronics</option>
+                                <option value="Mechanical Eng">Mechanical Eng</option>
+                                <option value="Civil Eng">Civil Eng</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="year" class="form-label">Year of Study <span class="required">*</span></label>
+                                <select id="year" name="year" class="form-select" required>
+                                    <option value="1" selected>Year 1</option>
+                                    <option value="2">Year 2</option>
+                                    <option value="3">Year 3</option>
+                                    <option value="4">Year 4</option>
+                                    <option value="5">Year 5</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="phone" class="form-label">Phone Number <span class="required">*</span></label>
+                                <input 
+                                    type="tel" 
+                                    id="phone" 
+                                    name="phone" 
+                                    class="form-input" 
+                                    placeholder="e.g., 555-1035" 
+                                    required
+                                >
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="course_id" class="form-label">Initial Course Enrollment <span style="font-weight: normal; color: var(--text-muted);">(Optional)</span></label>
+                            <select id="course_id" name="course_id" class="form-select">
+                                <option value="">-- No initial enrollment --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary" id="submitBtn">
+                                <span>➕</span> Register Student
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 2. View Records Section: Student Directory -->
+            <section class="card" aria-labelledby="tableHeading">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="card-title-icon">👥</span>
+                        <div>
+                            <h2 id="tableHeading" class="card-title">Student Directory</h2>
+                            <p class="card-subtitle">Click any row or 'Details' button for full learning records</p>
+                        </div>
+                    </div>
+                    
+                    <div class="table-search-box">
+                        <input 
+                            type="text" 
+                            id="studentSearchInput" 
+                            placeholder="🔍 Filter by name, email, department..." 
+                            aria-label="Filter students table"
+                        >
+                    </div>
+                </div>
+
+                <div class="card-body no-padding">
+                    <div class="table-responsive">
+                        <table class="data-table" id="studentTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 75px;">ID</th>
+                                    <th>Student Name &amp; Email</th>
+                                    <th style="width: 145px;">Department</th>
+                                    <th style="width: 85px;">Year</th>
+                                    <th style="width: 125px;">Phone</th>
+                                    <th style="width: 140px;">Avg. Progress</th>
+                                    <th style="width: 125px; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTableBody">
+                                <!-- Populated dynamically by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="tableSearchEmptyState" style="display: none;" class="table-empty-search">
+                        <span>🔍</span>
+                        <p>No matching student records found for your search filter.</p>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <div class="table-stats-count">
+                        Showing <strong id="visibleStudentCount">31</strong> of <strong id="totalStudentCount">31</strong> students
+                    </div>
+                    <div class="table-tip">
+                        💡 Click <strong>Details</strong> to view full course enrollments &amp; quiz grades
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Deep Student Inspection Modal Dialog -->
+    <div id="studentDetailsModal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modalStudentTitle">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div class="modal-header-profile" id="modalHeaderProfile">
+                    <div class="student-modal-avatar">SA</div>
+                    <div class="student-modal-title">
+                        <h2 id="modalStudentTitle">Student Details</h2>
+                        <div class="student-modal-meta">
+                            <span class="id-badge">ID #1</span>
+                            <span>Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeStudentDetailsModal()" aria-label="Close modal dialog">&times;</button>
+            </div>
+            
+            <div class="modal-body" id="modalStudentContent">
+                <!-- Injected dynamically by app-client.js -->
+            </div>
+
+            <div class="modal-footer">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Online Course Learning Progress Management System &middot; Relational Database</span>
+                <button type="button" class="btn-primary" onclick="closeStudentDetailsModal()" style="max-width: 120px;">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Personalized Credit Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <strong>Online Course Learning Progress Management System</strong>
+                <span>Database Management System Course Project</span>
+            </div>
+            <div class="footer-credit">
+                <span>Developed by <strong>Siddhant Agarwal</strong> (Roll No: <strong>25WU0102262</strong>)</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Client-Side Relational Database Engine & UI Scripts -->
+    <script src="static/js/db-seed.js"></script>
+    <script src="static/js/client-db.js"></script>
+    <script src="static/js/app-client.js"></script>
+</body>
+</html>
