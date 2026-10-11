@@ -165,12 +165,12 @@ export const DashboardPage = ({ setActiveTab, showToast }) => {
     );
   }
 
-  if (error) {
+  if (error || !data || !data.summary) {
     return (
       <div style={{ padding: '2rem' }}>
         <div className="card" style={{ padding: '1.5rem', backgroundColor: '#fef2f2', borderColor: '#fca5a5', color: '#991b1b' }}>
           <h3 style={{ fontWeight: 600, fontSize: '1rem' }}>Failed to Load Dashboard Metrics</h3>
-          <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>{error}</p>
+          <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>{error || 'Unable to retrieve dashboard metrics.'}</p>
           <button onClick={loadDashboard} className="btn btn-secondary" style={{ marginTop: '1rem' }}>
             Retry
           </button>
